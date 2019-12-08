@@ -3,20 +3,20 @@ import os
 from flask_restplus import abort
 from werkzeug.exceptions import BadRequest
 
-from config import Config
+from config import config
 from service.core.queries import (
     create_file_entry,
     delete_file_entry,
-    get_file_name,
     create_dataset_entries,
 )
 
 
 class FileStorageHandler:
     def __init__(self):
-        self.directory_path = Config.STORAGE_DIRECTORY
+        self.directory_path = config.STORAGE_DIRECTORY
+        self.chunk_size = 1024  # 1MB
 
-    def save_file(self, file_name: str, data: bytes) -> dict:
+    def save_file(self, file_name: str, data) -> dict:
         """
         Saves the file to specified directory and returns its id
 
@@ -31,10 +31,15 @@ class FileStorageHandler:
         try:
             result = create_file_entry(file_name)
             with open(os.path.join(self.directory_path, f'{file_name}'), "wb") as fp:
-                fp.write(data)
+                while True:
+                    chunk = data.read(self.chunk_size)
+                    if not chunk:
+                        break
+
+                    fp.write(chunk)
 
             # if file was added to the the storage and there is no Exception,
-            # returns its id
+            # returns its id and name
             return result
 
         except ValueError:
@@ -64,7 +69,13 @@ class FileStorageHandler:
             raise BadRequest(f'File {file_name} you are trying to delete does not exist in storage')
 
     def create_dataset(self, payload: dict) -> int:
-        foo = Config.PROJECT_DIR
+        # get headers of al of them
+        # if headers are the same -> proceed
+        # if not -> 400
+
+        # if OK -> create a new file and write there line by line from each file
+
+        foo = config.PROJECT_DIR
         ids = payload['file_ids']
 
         for file_id in ids:

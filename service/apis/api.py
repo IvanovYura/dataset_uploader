@@ -1,4 +1,3 @@
-from flask import request, current_app
 from flask_restplus import Namespace, Resource
 from werkzeug.datastructures import FileStorage
 
@@ -40,7 +39,7 @@ class FilesApi(Resource):
     def post(self):
         args = parser.parse_args()
         file = args['csv_file']
-        data_stream = request.data
+        data_stream = file.stream
 
         result = uploader.save_file(file.filename, data_stream)
 

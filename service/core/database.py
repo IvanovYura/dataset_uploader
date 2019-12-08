@@ -4,7 +4,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import RealDictCursor
 from werkzeug.local import LocalProxy
 
-from config import Config
+from config import config
 
 
 def open_connection():
@@ -14,7 +14,7 @@ def open_connection():
     connection = g.get('connection')
 
     if connection is None:
-        connection = g.connection = open_user_connection(Config)
+        connection = g.connection = open_user_connection(config)
     return connection
 
 
