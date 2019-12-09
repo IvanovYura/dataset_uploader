@@ -1,20 +1,23 @@
+from typing import List
+
 from psycopg2.errors import UniqueViolation
 
 from service.core.database import conn, get_dict_cursor
 
-SQL_GET_FILE = '''
-    SELECT name
+SQL_GET_FILES = '''
+    SELECT name, headers
     FROM file
-    WHERE
-    id = %(file_id)s;
+    WHERE id IN %(file_ids)s;
 '''
 
 SQL_CREATE_FILE = '''
     INSERT INTO file (
-        name
+        name,
+        headers
     )
     VALUES (
-        %(name)s    
+        %(name)s,
+        %(headers)s  
     )
     RETURNING id, name;
 '''
@@ -28,17 +31,19 @@ SQL_DELETE_FILE = '''
 
 SQL_CREATE_DATSASET_ENTRY = '''
     INSERT INTO dataset (
-        dataset
+        name,
+        file_ids
     )
     VALUES
     (
-        %(dataset)s
+        %(name)s,
+        %(file_ids)s
     )
-    RETURNING id;
+    RETURNING id, name;
 '''
 
 
-def create_file_entry(file_name: str) -> dict:
+def create_file_entry(file_name: str, headers: list) -> dict:
     """
     Creates entry in file table
 
@@ -46,7 +51,7 @@ def create_file_entry(file_name: str) -> dict:
     """
     with get_dict_cursor(conn) as cursor:
         try:
-            cursor.execute(SQL_CREATE_FILE, {'name': file_name})
+            cursor.execute(SQL_CREATE_FILE, {'name': file_name, 'headers': headers})
 
         except UniqueViolation:
             raise ValueError(f'File with the name={file_name} already exists.')
@@ -75,22 +80,34 @@ def delete_file_entry(file_id: int):
         return None
 
 
-def create_dataset_entries(dataset: dict):
+def create_dataset_entries(file_ids: List[int]):
     with get_dict_cursor(conn) as cursor:
-        cursor.execute(
-            SQL_CREATE_DATSASET_ENTRY,
-            {
-                'dataset': dataset,
-            })
+        dataset_name = _generate_dataset_name(file_ids)
+        try:
+            cursor.execute(
+                SQL_CREATE_DATSASET_ENTRY,
+                {
+                    'name': dataset_name,
+                    'file_ids': file_ids,
+                })
+        except UniqueViolation:
+            raise ValueError(f'Dataset with the name={dataset_name} already exists.')
+
         conn.commit()
         return cursor.fetchone()
 
 
-def get_file_name(file_id: int):
+def _generate_dataset_name(file_ids: List[int]):
+    # if ids = [1, 2, 3], dataset name will be files_1_2_3
+    ids = '_'.join(map(str, file_ids))
+    return f'files_{ids}'
+
+
+def get_files(file_ids: List[int]):
     with get_dict_cursor(conn) as cursor:
         cursor.execute(
-            SQL_GET_FILE,
+            SQL_GET_FILES,
             {
-                'file_id': file_id,
+                'file_ids': tuple(file_ids),
             })
-        return cursor.fetchone()
+        return cursor.fetchall()

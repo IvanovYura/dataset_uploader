@@ -1,4 +1,4 @@
-from flask_restplus import Namespace, Resource
+from flask_restplus import Namespace, Resource, abort
 from werkzeug.datastructures import FileStorage
 
 from service.apis.utils import register_models
@@ -39,6 +39,8 @@ class FilesApi(Resource):
     def post(self):
         args = parser.parse_args()
         file = args['csv_file']
+        _validate_content_type_or_400(file)
+
         data_stream = file.stream
 
         result = uploader.save_file(file.filename, data_stream)
@@ -46,10 +48,21 @@ class FilesApi(Resource):
         return result, 201
 
 
+def _validate_content_type_or_400(file: FileStorage):
+    supported_types = {
+        'text/csv': True,
+    }
+    content_type = file.headers['Content-Type']
+    if not supported_types.get(content_type):
+        abort(400, 'Unsupported file type')
+
+    return None
+
+
 @namespace.route('/file/<int:file_id>')
 @namespace.doc(
     params={
-        'resource_id': 'Resource ID',
+        'file_id': 'File ID',
     }
 )
 class FileApi(Resource):

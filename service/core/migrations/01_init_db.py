@@ -8,9 +8,9 @@ SQL_INIT_DB = '''
     CREATE TABLE IF NOT EXISTS file (
         id SERIAL,
         name TEXT NOT NULL,
-        timestamp timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,  
+        created_on timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,  
         
-        headers array NOT NULL,  
+        headers TEXT[] NOT NULL,  
             
         PRIMARY KEY(id)
     );
